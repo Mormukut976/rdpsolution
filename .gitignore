@@ -1,0 +1,24 @@
+# Environment variables & Secrets
+.env
+.env.*
+data/
+recordings/
+drive/
+*.log
+
+# Operating System files
+.DS_Store
+
+# Node dependency directory
+node_modules/
+npm-debug.log*
+
+# C# build artifacts (Agent)
+bin/
+obj/
+*.user
+*.suo
+
+# Temporary
+tmp/
+temp/

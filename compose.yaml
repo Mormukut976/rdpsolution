@@ -1,0 +1,81 @@
+name: openremote
+
+services:
+  gateway:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    depends_on:
+      control:
+        condition: service_healthy
+      guacamole:
+        condition: service_started
+    ports:
+      - "${OPENREMOTE_PORT:-17880}:80"
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - edge
+      - backend
+
+  control:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      OPENREMOTE_HOST: 0.0.0.0
+      OPENREMOTE_PORT: 17880
+      OPENREMOTE_DB_PATH: /opt/openremote/data/openremote.sqlite
+      OPENREMOTE_PUBLIC_URL: "${OPENREMOTE_PUBLIC_URL:-http://localhost:17880}"
+      OPENREMOTE_SECURE_COOKIES: "${OPENREMOTE_SECURE_COOKIES:-false}"
+      OPENREMOTE_TRUST_PROXY: "true"
+      OPENREMOTE_SESSION_HOURS: "${OPENREMOTE_SESSION_HOURS:-12}"
+      GUACAMOLE_PUBLIC_URL: "${GUACAMOLE_PUBLIC_URL:-http://localhost:17880/guacamole/}"
+      GUACAMOLE_JSON_SECRET: "${GUACAMOLE_JSON_SECRET:?Run npm run init first}"
+    volumes:
+      - control-data:/opt/openremote/data
+    expose:
+      - "17880"
+    networks:
+      - backend
+
+  guacd:
+    image: guacamole/guacd:1.6.0
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+    volumes:
+      - session-drive:/drive
+      - session-recordings:/recordings
+    expose:
+      - "4822"
+    networks:
+      - remote
+
+  guacamole:
+    image: guacamole/guacamole:1.6.0
+    restart: unless-stopped
+    depends_on:
+      - guacd
+    environment:
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822
+      JSON_ENABLED: "true"
+      JSON_SECRET_KEY: "${GUACAMOLE_JSON_SECRET:?Run npm run init first}"
+      WEBAPP_CONTEXT: guacamole
+    expose:
+      - "8080"
+    networks:
+      - backend
+      - remote
+
+volumes:
+  control-data:
+  session-drive:
+  session-recordings:
+
+networks:
+  edge:
+  backend:
+    internal: true
+  remote:
+    internal: true

@@ -1,0 +1,5 @@
+{
+  "ServerUrl": "https://remote.example.com",
+  "AgentToken": "paste-the-one-time-token-from-the-admin-console",
+  "HeartbeatSeconds": 30
+}

@@ -1,0 +1,70 @@
+name: CI/CD Deployment to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Initialize Environment for Tests
+        run: npm run init
+
+      - name: Run Backend Tests
+        run: npm test
+
+  deploy:
+    name: Deploy to AWS EC2
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            if [ ! -d "${{ secrets.TARGET_DIR }}" ]; then
+              mkdir -p "${{ secrets.TARGET_DIR }}"
+              git clone https://github.com/Mormukut976/rdpsolution.git "${{ secrets.TARGET_DIR }}"
+            fi
+            
+            cd "${{ secrets.TARGET_DIR }}"
+            
+            # Fetch latest updates from Git
+            git fetch --all
+            git reset --hard origin/main
+            
+            # Build and deploy with Docker Compose
+            if [ ! -f .env ]; then
+              npm run init
+              echo "OPENREMOTE_PUBLIC_URL=http://${{ secrets.EC2_HOST }}:17880" >> .env
+            fi
+            
+            docker compose down || true
+            docker compose up -d --build
