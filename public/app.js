@@ -760,17 +760,42 @@ async function createAgentToken(hostId) {
   try {
     const result = await api(`/api/hosts/${hostId}/agent-token`, { method: "POST" });
     openDialog(`
-      ${modalHeader("Agent token created", "Copy this token now. It cannot be shown again.")}
+      ${modalHeader("Agent Configuration", "Configure the host agent using the token below.")}
       <div class="modal-body form-grid">
-        <div class="notice">Store this token securely on the matching Windows host.</div>
+        <div class="notice">This token is only shown once. Copy it now:</div>
         <div class="code-box" id="agent-token">${escapeHtml(result.token)}</div>
-        <button class="button secondary" id="copy-agent-token" type="button">Copy token</button>
+        <button class="button secondary" id="copy-agent-token" type="button" style="margin-bottom: 20px;">Copy token</button>
+        
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;" />
+        
+        <h4 style="margin: 0 0 10px 0; color: var(--text);">Install Agent on Windows</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
+          Download the Windows Agent zip, extract it, and run PowerShell as Administrator:
+        </p>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <a class="button primary" href="/bin/openremote-agent.zip" download style="text-decoration: none; text-align: center; display: inline-block; padding: 8px 16px;">⬇️ Download Windows Agent</a>
+        </div>
+        <div class="code-box" style="font-size: 0.8rem; font-family: monospace; padding: 10px; border-radius: 6px;">.\install-agent.ps1 -ServerUrl "${window.location.origin}" -AgentToken "${escapeHtml(result.token)}"</div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;" />
+
+        <h4 style="margin: 0 0 10px 0; color: var(--text);">Install Agent on Linux (Ubuntu, Debian, etc.)</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
+          Run this single command as root to automatically install and start the Linux health agent:
+        </p>
+        <div class="code-box" id="linux-command" style="font-size: 0.8rem; font-family: monospace; padding: 10px; border-radius: 6px; word-break: break-all; margin-bottom: 10px;">curl -sSL ${window.location.origin}/bin/install-agent.sh | sudo bash -s -- -u "${window.location.origin}" -t "${escapeHtml(result.token)}"</div>
+        <button class="button secondary" id="copy-linux-command" type="button">Copy Linux Command</button>
       </div>
       <footer class="modal-footer"><button class="button primary" data-close-modal type="button">Done</button></footer>
     `);
     document.querySelector("#copy-agent-token").addEventListener("click", async () => {
       await navigator.clipboard.writeText(result.token);
       toast("Agent token copied.");
+    });
+    document.querySelector("#copy-linux-command").addEventListener("click", async () => {
+      const commandText = `curl -sSL ${window.location.origin}/bin/install-agent.sh | sudo bash -s -- -u "${window.location.origin}" -t "${result.token}"`;
+      await navigator.clipboard.writeText(commandText);
+      toast("Linux installation command copied.");
     });
     await renderHosts();
   } catch (error) {

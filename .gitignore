@@ -14,8 +14,9 @@ node_modules/
 npm-debug.log*
 
 # C# build artifacts (Agent)
-bin/
-obj/
+agent/bin/
+agent/obj/
+agent/publish/
 *.user
 *.suo
 
